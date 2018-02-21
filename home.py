@@ -24,8 +24,15 @@ log_config = None
 #ROOT_DIR='/usr/local/www/ship_log'
 #ROOT_DIR='/Library/WebServer/Documents/logFlask'
 #ROOT_DIR='/Users/tgonder/DEV/sea_ayers_log/logFlask'
-#ROOT_DIR='/home/ubuntu/sea_ayers_log'
-ROOT_DIR='/var/www/FlaskApps/LogApp'
+
+from sys import platform as _platform
+if _platform == 'darwin':
+    ROOT_DIR='/Users/tgonder/GIT/captains_log'
+    FLASK_PORT=8080
+else:
+    ROOT_DIR='/var/www/FlaskApps/LogApp'
+    FLASK_PORT=80
+
 
 DATABASE=ROOT_DIR + '/LOG.db'
 DATABASE_SCHEMA='LOG.schema.sql'
@@ -93,6 +100,27 @@ def clear_session_filter():
 
 
 
+def html_to_text(s):
+    try:
+        tag = False
+        quote = False
+        out = ""
+
+        for c in s:
+                if c == '<' and not quote:
+                    tag = True
+                elif c == '>' and not quote:
+                    tag = False
+                elif (c == '"' or c == "'") and tag:
+                    quote = not quote
+                elif not tag:
+                    out = out + c
+
+        return out
+    except Exception,e:
+        print 'Failed to get non HTML string! e:',e
+
+
 
 '''
 *************************
@@ -109,7 +137,7 @@ def index():
 @app.route('/login', methods=['POST'])
 def do_admin_login():
     try:
-        print 'do_admin_login()'
+        print 'login()'
         if request.form['password'] == 'mbh' and request.form['username'] == 'henry':
             session['logged_in'] = True
             return redirect(url_for('log'))
@@ -1111,7 +1139,6 @@ def init(filter=None, page=1):
                     row['date']=date
                     row['log_type']=log_type
                     row['aboard']=aboard
-                    row['details']=details
                     row['lobsters_caught']=lobsters_caught
                     try:
                         date_object = datetime.strptime(date, '%Y-%m-%d')
@@ -1128,7 +1155,9 @@ def init(filter=None, page=1):
                             details_short = details[0:char_to_display]
                             if len(details) > char_to_display:
                                 details_short += "..."
-                        row['details_short'] = details_short
+                        #print 'details_short:"' + str(details_short) + '"'
+                        #row['details_short'] = details_short
+                        row['details_short'] = html_to_text(details_short)
                     except:
                         pass
 
@@ -1183,5 +1212,4 @@ def init(filter=None, page=1):
 if __name__ == '__main__':
     print 'starting Sea Ayers Log...'
     app.secret_key = 'A0Zr98j/3yX R~GGH!jmN]LWX/,?RG'
-    #app.run(host="0.0.0.0", port=80, debug=True, ssl_context='adhoc')
-    app.run(host="0.0.0.0", port=80, debug=True)
+    app.run(host="0.0.0.0", port=FLASK_PORT, debug=True)
